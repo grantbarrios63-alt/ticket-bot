@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-TOKEN = "your_bot_token_here"
+TOKEN = "PASTE_NEW_TOKEN_HERE"
 
 intents = discord.Intents.default()
 intents.message_content = True
