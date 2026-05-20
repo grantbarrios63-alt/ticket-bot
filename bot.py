@@ -1,11 +1,8 @@
 import discord
 from discord.ext import commands
-import os
 
-# ---------- TOKEN ----------
-TOKEN = os.getenv("TOKEN")  # <-- IMPORTANT: use TOKEN (not DISCORD_TOKEN)
+TOKEN = "your_bot_token_here"
 
-# ---------- INTENTS ----------
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
@@ -15,40 +12,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 CATEGORY_NAME = "Tickets"
 STAFF_ROLE_NAME = "Staff"
-
-
-# ---------- TICKET CONTROLS ----------
-class TicketControls(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="Claim Ticket", style=discord.ButtonStyle.blurple)
-    async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
-
-        staff_role = discord.utils.get(interaction.guild.roles, name=STAFF_ROLE_NAME)
-
-        if staff_role not in interaction.user.roles:
-            await interaction.response.send_message(
-                "Only staff can claim tickets.", ephemeral=True
-            )
-            return
-
-        await interaction.channel.send(f"📌 Claimed by {interaction.user.mention}")
-        await interaction.response.send_message("You claimed the ticket.", ephemeral=True)
-
-    @discord.ui.button(label="Close Ticket", style=discord.ButtonStyle.red)
-    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
-
-        staff_role = discord.utils.get(interaction.guild.roles, name=STAFF_ROLE_NAME)
-
-        if staff_role not in interaction.user.roles:
-            await interaction.response.send_message(
-                "Only staff can close tickets.", ephemeral=True
-            )
-            return
-
-        await interaction.response.send_message("Closing ticket...", ephemeral=True)
-        await interaction.channel.delete()
 
 
 # ---------- BUTTON PANEL ----------
@@ -66,6 +29,11 @@ class TicketPanel(discord.ui.View):
         if not category:
             category = await guild.create_category(CATEGORY_NAME)
 
+        existing = discord.utils.get(guild.text_channels, name=f"ticket-{user.id}")
+        if existing:
+            await interaction.response.send_message("You already have a ticket.", ephemeral=True)
+            return
+
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
@@ -73,10 +41,7 @@ class TicketPanel(discord.ui.View):
 
         staff_role = discord.utils.get(guild.roles, name=STAFF_ROLE_NAME)
         if staff_role:
-            overwrites[staff_role] = discord.PermissionOverwrite(
-                view_channel=True,
-                send_messages=True
-            )
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
 
         channel = await guild.create_text_channel(
             name=f"ticket-{user.id}",
@@ -85,14 +50,41 @@ class TicketPanel(discord.ui.View):
         )
 
         await channel.send(
-            content=f"{user.mention} Welcome! A staff member will help you soon.",
+            f"{user.mention} Welcome! A staff member will help you soon.",
             view=TicketControls()
         )
 
-        await interaction.response.send_message(
-            f"Ticket created: {channel.mention}",
-            ephemeral=True
-        )
+        await interaction.response.send_message(f"Ticket created: {channel.mention}", ephemeral=True)
+
+
+# ---------- TICKET CONTROLS ----------
+class TicketControls(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Claim Ticket", style=discord.ButtonStyle.blurple)
+    async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        staff_role = discord.utils.get(interaction.guild.roles, name=STAFF_ROLE_NAME)
+
+        if staff_role not in interaction.user.roles:
+            await interaction.response.send_message("Only staff can claim tickets.", ephemeral=True)
+            return
+
+        await interaction.channel.send(f"📌 Claimed by {interaction.user.mention}")
+        await interaction.response.send_message("You claimed the ticket.", ephemeral=True)
+
+    @discord.ui.button(label="Close Ticket", style=discord.ButtonStyle.red)
+    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        staff_role = discord.utils.get(interaction.guild.roles, name=STAFF_ROLE_NAME)
+
+        if staff_role not in interaction.user.roles:
+            await interaction.response.send_message("Only staff can close tickets.", ephemeral=True)
+            return
+
+        await interaction.response.send_message("Closing ticket...", ephemeral=True)
+        await interaction.channel.delete()
 
 
 # ---------- COMMAND ----------
@@ -107,14 +99,10 @@ async def panel(ctx):
     await ctx.send(embed=embed, view=TicketPanel())
 
 
-# ---------- READY ----------
+# ---------- READY EVENT ----------
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
 
-
-# ---------- RUN (ONLY ONCE) ----------
-if TOKEN is None:
-    print("ERROR: TOKEN not found in environment variables!")
 
 bot.run(TOKEN)
