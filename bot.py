@@ -3,10 +3,9 @@ from discord.ext import commands
 
 import os
 
-TOKEN = os.getenv("DISCORD_TOKEN")
+import os
 
-if not TOKEN:
-    raise Exception("DISCORD_TOKEN is not set in environment variables!")
+TOKEN = os.getenv("DISCORD_TOKEN")
 
 bot.run(TOKEN)
 
