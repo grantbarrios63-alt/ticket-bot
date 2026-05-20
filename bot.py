@@ -1,14 +1,11 @@
 import discord
 from discord.ext import commands
-
 import os
 
-import os
+# ---------- TOKEN ----------
+TOKEN = os.getenv("TOKEN")  # <-- IMPORTANT: use TOKEN (not DISCORD_TOKEN)
 
-TOKEN = os.getenv("DISCORD_TOKEN")
-
-bot.run(TOKEN)
-
+# ---------- INTENTS ----------
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
@@ -31,7 +28,9 @@ class TicketControls(discord.ui.View):
         staff_role = discord.utils.get(interaction.guild.roles, name=STAFF_ROLE_NAME)
 
         if staff_role not in interaction.user.roles:
-            await interaction.response.send_message("Only staff can claim tickets.", ephemeral=True)
+            await interaction.response.send_message(
+                "Only staff can claim tickets.", ephemeral=True
+            )
             return
 
         await interaction.channel.send(f"📌 Claimed by {interaction.user.mention}")
@@ -43,7 +42,9 @@ class TicketControls(discord.ui.View):
         staff_role = discord.utils.get(interaction.guild.roles, name=STAFF_ROLE_NAME)
 
         if staff_role not in interaction.user.roles:
-            await interaction.response.send_message("Only staff can close tickets.", ephemeral=True)
+            await interaction.response.send_message(
+                "Only staff can close tickets.", ephemeral=True
+            )
             return
 
         await interaction.response.send_message("Closing ticket...", ephemeral=True)
@@ -72,7 +73,10 @@ class TicketPanel(discord.ui.View):
 
         staff_role = discord.utils.get(guild.roles, name=STAFF_ROLE_NAME)
         if staff_role:
-            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
+            overwrites[staff_role] = discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True
+            )
 
         channel = await guild.create_text_channel(
             name=f"ticket-{user.id}",
@@ -80,11 +84,9 @@ class TicketPanel(discord.ui.View):
             overwrites=overwrites
         )
 
-        view = TicketControls()
-
         await channel.send(
             content=f"{user.mention} Welcome! A staff member will help you soon.",
-            view=view
+            view=TicketControls()
         )
 
         await interaction.response.send_message(
@@ -105,10 +107,14 @@ async def panel(ctx):
     await ctx.send(embed=embed, view=TicketPanel())
 
 
-# ---------- READY EVENT ----------
+# ---------- READY ----------
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
 
+
+# ---------- RUN (ONLY ONCE) ----------
+if TOKEN is None:
+    print("ERROR: TOKEN not found in environment variables!")
 
 bot.run(TOKEN)
